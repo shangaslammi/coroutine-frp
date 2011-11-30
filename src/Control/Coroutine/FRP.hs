@@ -78,8 +78,9 @@ delayE delay = arr (const delay) &&& C.id >>> delayEn
 
 delayEn :: Coroutine (Int, Event e) (Event e)
 delayEn = Coroutine $ step 0 IntMap.empty where
-    step !cur !buffer (delay, ev) = (ev', Coroutine $ step (cur+1) buffer') where
+    step !cur !buffer (delay, ev) = (ev', Coroutine $ step (cur+1) buffer'') where
         ev' = IntMap.findWithDefault [] cur buffer'
         buffer'
             | null ev   = buffer
             | otherwise = IntMap.insertWith (++) (cur+delay) ev buffer
+        buffer'' = IntMap.delete cur buffer'
