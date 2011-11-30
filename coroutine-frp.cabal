@@ -1,0 +1,16 @@
+Name:               coroutine-frp
+Version:            0.0.1.0
+Synopsis:           FRP using coroutines
+Description:        A minimalistic reactive programming library based on coroutines for fixed time-step interactive simulations.
+License:            MIT
+License-file:       LICENSE
+Author:             Sami Hangaslammi
+Maintainer:         Sami Hangaslammi <shang@iki.fi>
+Category:           Reactivity
+Build-Type:         Simple
+Cabal-Version:      >=1.2
+
+Hs-Source-Dirs:     src
+Exposed-modules:    Control.Coroutine, Control.Coroutine.FRP
+Build-Depends:      base >= 4, transformers >= 0.2.2.0, containers >= 0.4.2.0
+
