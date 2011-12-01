@@ -11,6 +11,6 @@ Build-Type:         Simple
 Cabal-Version:      >=1.2
 
 Hs-Source-Dirs:     src
-Exposed-modules:    Control.Coroutine, Control.Coroutine.FRP
+Exposed-modules:    Control.Coroutine, Control.Coroutine.FRP, Control.Coroutine.FRP.Collections
 Build-Depends:      base >= 4, transformers >= 0.2.2.0, containers >= 0.4.2.0
 
