@@ -3,6 +3,7 @@
 module Control.Coroutine.FRP where
 
 import qualified Control.Category as C
+import Control.Applicative (pure)
 import Control.Arrow
 import Data.List (foldl')
 
@@ -68,6 +69,12 @@ stepE :: a -> Coroutine (Event a) a
 stepE a = Coroutine $ \ev ->
     let a' = last (a:ev)
     in (a', stepE a')
+
+onceE :: [a] -> Coroutine i (Event a)
+onceE events = onceThen events $ pure []
+
+onceThen :: [a] -> Coroutine i (Event a) -> Coroutine i (Event a)
+onceThen events co = Coroutine $ \_ -> (events, co)
 
 restartWhen :: Coroutine a b -> Coroutine (a, Event e) b
 restartWhen co = Coroutine $ step co where
