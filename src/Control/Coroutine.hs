@@ -7,6 +7,7 @@ import Data.Functor
 import Control.Applicative
 import Control.Arrow
 import Control.Category
+import Control.Monad (liftM2)
 
 newtype Coroutine i o = Coroutine { runC :: i -> (o, Coroutine i o) }
 
@@ -55,6 +56,12 @@ scan f i = Coroutine $ step i where
 
 zipC :: (a -> b -> c) -> Coroutine (a,b) c
 zipC = arr . uncurry
+
+joinCM :: Monad m => Coroutine (m a, m b) (m (a,b))
+joinCM = zipC $ liftM2 (,)
+
+joinCA :: Applicative p => Coroutine (p a, p b) (p (a,b))
+joinCA = zipC $ liftA2 (,)
 
 evalList :: Coroutine i o -> [i] -> [o]
 evalList _  []     = []
