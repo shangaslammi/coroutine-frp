@@ -24,6 +24,10 @@ watch f = Coroutine $ \i ->
         then ([i], watch f)
         else ([], watch f)
 
+scan :: (a -> b -> a) -> a -> Coroutine b a
+scan f i = Coroutine $ step i where
+    step a b = let a' = f a b in (a', scan f a')
+
 withPrevious :: a -> Coroutine a (a,a)
 withPrevious first = Coroutine $ \i -> ((i, first), step i) where
     step old = Coroutine $ \i -> ((i, old), step i)

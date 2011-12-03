@@ -50,10 +50,6 @@ instance ArrowChoice Coroutine where
             Left b  -> let (o, co') = runC co b in (Left o, left co')
             Right c -> (Right c, Coroutine step)
 
-scan :: (a -> b -> a) -> a -> Coroutine b a
-scan f i = Coroutine $ step i where
-    step a b = let a' = f a b in (a', scan f a')
-
 zipC :: (a -> b -> c) -> Coroutine (a,b) c
 zipC = arr . uncurry
 
