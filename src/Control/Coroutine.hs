@@ -4,6 +4,7 @@ module Control.Coroutine where
 import Prelude hiding (id, (.))
 
 import Data.Functor
+import Data.List (mapAccumL)
 import Control.Applicative
 import Control.Arrow
 import Control.Category
@@ -52,6 +53,12 @@ instance ArrowChoice Coroutine where
 
 zipC :: (a -> b -> c) -> Coroutine (a,b) c
 zipC = arr . uncurry
+
+mapC :: Coroutine a b -> Coroutine [a] [b]
+mapC co = Coroutine $ \as ->
+    let (co', bs) = mapAccumL step co as
+        step co a = (\(a,b)->(b,a)) $ runC co a
+    in (bs, mapC co')
 
 joinCM :: Monad m => Coroutine (m a, m b) (m (a,b))
 joinCM = zipC $ liftM2 (,)
