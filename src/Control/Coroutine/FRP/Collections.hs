@@ -10,13 +10,16 @@ import qualified Data.IntMap as IntMap
 
 newtype RecvID = RecvID { unRecvID :: Int }
 
-type TEvent a = [(RecvID, a)]
+type TEvent a = [Tagged a]
+type Tagged a = (RecvID, a)
 
 type Item i a         = Coroutine i (Maybe a)
 type Receiver i e a   = Coroutine (i, Event e) (Maybe a)
+type Sender i e a     = Coroutine i (Maybe a, Event e)
 type RecvSend i r s a = Coroutine (i, Event r) (Maybe a, Event s)
 
-collection :: [Item i a] -> Coroutine (i, Event (Item i a)) [a]
+collection  :: [Item i a]
+            -> Coroutine (i, Event (Item i a)) [a]
 collection = Coroutine . step where
     step col (i, ev) = (objs, cont) where
         (objs, conts) = unzip $ runConts $ ev ++ col
@@ -27,7 +30,8 @@ collection = Coroutine . step where
         (Nothing, _) -> a
         (Just x,  c) -> (x,c):a
 
-receivers :: [Receiver i e a] -> Coroutine (i, (Event (Receiver i e a), TEvent e)) [(RecvID, a)]
+receivers   :: [Receiver i e a]
+            -> Coroutine (i, (Event (Receiver i e a), TEvent e)) [Tagged a]
 receivers = Coroutine . initCol where
     initCol = uncurry step . foldl' add (0, IntMap.empty)
 
@@ -43,7 +47,18 @@ receivers = Coroutine . initCol where
 
     add (cid, col) x = (cid+1, IntMap.insert cid x col)
 
-recvSenders :: [RecvSend i r s a] -> Coroutine (i, (Event (RecvSend i r s a), TEvent r)) ([(RecvID, a)], Event s)
+senders :: [Sender i e a]
+        -> Coroutine (i, Event (Sender i e a)) ([a], Event e)
+senders = Coroutine . step where
+    step col (i, ev) = ((objs, evs), cont) where
+        (objs, evs, conts) = foldr process ([],[],[]) col
+        process c (os,es,cs) = case runC c i of
+            ((Nothing, ev), _) -> (os,ev++es,cs)
+            ((Just o, ev), c') -> (o:os,ev++es,c':cs)
+        cont = Coroutine $ step conts
+
+recvSenders :: [RecvSend i r s a]
+            -> Coroutine (i, (Event (RecvSend i r s a), TEvent r)) ([Tagged a], Event s)
 recvSenders = Coroutine . initCol where
     initCol = uncurry step . foldl' add (0, IntMap.empty)
 
