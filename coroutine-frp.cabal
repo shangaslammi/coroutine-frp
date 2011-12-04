@@ -1,5 +1,5 @@
 Name:               coroutine-frp
-Version:            0.0.2.0
+Version:            0.0.3.0
 Synopsis:           FRP using coroutines
 Description:        A minimalistic reactive programming library based on coroutines for fixed time-step interactive simulations.
 License:            MIT
