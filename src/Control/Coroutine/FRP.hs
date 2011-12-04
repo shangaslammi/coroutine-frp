@@ -70,6 +70,11 @@ stepE a = Coroutine $ \ev ->
     let a' = last (a:ev)
     in (a', stepE a')
 
+skipE :: Int -> Coroutine (Event e) (Event e)
+skipE n = Coroutine $ step n where
+    step 0 ev = (ev, C.id)
+    step n ev = ([], Coroutine $ step $ n-1)
+
 onceE :: [a] -> Coroutine i (Event a)
 onceE events = onceThen events $ pure []
 
