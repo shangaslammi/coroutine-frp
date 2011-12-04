@@ -51,7 +51,7 @@ senders :: [Sender i e a]
         -> Coroutine (i, Event (Sender i e a)) ([a], Event e)
 senders = Coroutine . step where
     step col (i, ev) = ((objs, evs), cont) where
-        (objs, evs, conts) = foldr process ([],[],[]) col
+        (objs, evs, conts) = foldr process ([],[],[]) $ ev ++ col
         process c (os,es,cs) = case runC c i of
             ((Nothing, ev), _) -> (os,ev++es,cs)
             ((Just o, ev), c') -> (o:os,ev++es,c':cs)
