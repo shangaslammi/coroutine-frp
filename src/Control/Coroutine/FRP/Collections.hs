@@ -18,6 +18,9 @@ type Receiver i e a   = Coroutine (i, Event e) (Maybe a)
 type Sender i e a     = Coroutine i (Maybe a, Event e)
 type RecvSend i r s a = Coroutine (i, Event r) (Maybe a, Event s)
 
+untag :: [Tagged a] -> [a]
+untag = map snd
+
 collection  :: [Item i a]
             -> Coroutine (i, Event (Item i a)) [a]
 collection = Coroutine . step where
