@@ -93,10 +93,10 @@ restartWhen co = Coroutine $ step co where
             | otherwise = step co
 
 switchE :: Coroutine a b -> Coroutine (a, Event (Coroutine a b)) b
-switchE i = switchWith i id
+switchE = switchWith id
 
-switchWith :: Coroutine a b -> (e -> Coroutine a b) -> Coroutine (a, Event e) b
-switchWith co switch  = Coroutine $ step1 co where
+switchWith :: (e -> Coroutine a b) -> Coroutine a b -> Coroutine (a, Event e) b
+switchWith switch co  = Coroutine $ step1 co where
     step1 co (a, []) = (b, Coroutine $ step1 co') where
         (b, co') = runC co a
     step1 _ (a, ev) = (b, Coroutine $ step1 co') where
