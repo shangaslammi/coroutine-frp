@@ -89,6 +89,14 @@ restartWhen co = Coroutine $ step co where
             | null ev   = step c'
             | otherwise = step co
 
+switchE :: Coroutine a b -> (e -> Coroutine a b) -> Coroutine (a, Event e) b
+switchE co switch  = Coroutine $ step1 co where
+    step1 co (a, []) = (b, Coroutine $ step1 co') where
+        (b, co') = runC co a
+    step1 _ (a, ev) = (b, Coroutine $ step1 co') where
+        co = switch (last ev)
+        (b, co') = runC co a
+
 delayE :: Int -> Coroutine (Event e) (Event e)
 delayE delay = arr (const delay) &&& C.id >>> delayEn
 
