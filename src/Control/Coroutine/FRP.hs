@@ -53,6 +53,9 @@ scanE f i = Coroutine $ step i where
 mapE :: (e -> e') -> Coroutine (Event e) (Event e')
 mapE = arr . map
 
+tagE :: Coroutine (a, Event e) (Event a)
+tagE = arr $ \(a, ev) -> map (const a) ev
+
 concatMapE :: (e -> Event e') -> Coroutine (Event e) (Event e')
 concatMapE = arr . concatMap
 
@@ -89,8 +92,11 @@ restartWhen co = Coroutine $ step co where
             | null ev   = step c'
             | otherwise = step co
 
-switchE :: Coroutine a b -> (e -> Coroutine a b) -> Coroutine (a, Event e) b
-switchE co switch  = Coroutine $ step1 co where
+switchE :: Coroutine a b -> Coroutine (a, Event (Coroutine a b)) b
+switchE i = switchWith i id
+
+switchWith :: Coroutine a b -> (e -> Coroutine a b) -> Coroutine (a, Event e) b
+switchWith co switch  = Coroutine $ step1 co where
     step1 co (a, []) = (b, Coroutine $ step1 co') where
         (b, co') = runC co a
     step1 _ (a, ev) = (b, Coroutine $ step1 co') where
