@@ -45,6 +45,14 @@ every nth e = Coroutine $ step 0 where
     step 0 _ = ([e], Coroutine $ step nth)
     step n _ = ([], Coroutine  $ step $ n-1)
 
+countUp :: Int -> Coroutine a Int
+countUp = Coroutine . step where
+    step n _ = (n', Coroutine $ step n') where n' = n + 1
+
+countDown :: Int -> Coroutine a Int
+countDown = Coroutine . step where
+    step n _ = (n', Coroutine $ step n') where n' = n - 1
+
 integrate :: Num a => a -> Coroutine a a
 integrate = scan (+)
 
