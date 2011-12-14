@@ -60,6 +60,10 @@ mapC co = Coroutine $ \as ->
         step co a = (\(a,b)->(b,a)) $ runC co a
     in (bs, mapC co')
 
+cycleC :: [b] -> Coroutine a b
+cycleC = Coroutine . step . cycle where
+    step (x:xs) _ = (x, Coroutine $ step xs)
+
 joinCM :: Monad m => Coroutine (m a, m b) (m (a,b))
 joinCM = zipC $ liftM2 (,)
 

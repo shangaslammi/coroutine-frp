@@ -40,6 +40,11 @@ withPrevious' = Coroutine $ \i -> ((i,i), step i) where
 delay :: a -> Coroutine a a
 delay a = withPrevious a >>> arr snd
 
+every :: Int -> e -> Coroutine a (Event e)
+every nth e = Coroutine $ step 0 where
+    step 0 _ = ([e], Coroutine $ step nth)
+    step n _ = ([], Coroutine  $ step $ n-1)
+
 integrate :: Num a => a -> Coroutine a a
 integrate = scan (+)
 
