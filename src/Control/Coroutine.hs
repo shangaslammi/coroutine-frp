@@ -64,6 +64,11 @@ cycleC :: [b] -> Coroutine a b
 cycleC = Coroutine . step . cycle where
     step (x:xs) _ = (x, Coroutine $ step xs)
 
+updateC :: a -> Coroutine (a -> a) a
+updateC = Coroutine . step where
+    step a f = (a', Coroutine $ step a') where
+        a' = f a
+
 joinCM :: Monad m => Coroutine (m a, m b) (m (a,b))
 joinCM = zipC $ liftM2 (,)
 

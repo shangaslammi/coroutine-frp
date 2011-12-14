@@ -81,6 +81,11 @@ mergeE = zipC (++)
 constE :: e -> Coroutine (Event e') (Event e)
 constE = mapE . const
 
+updateE :: a -> Coroutine (Event (a -> a)) a
+updateE = Coroutine . step where
+    step a fs = (a', Coroutine $ step a') where
+        a' = foldl' (flip ($)) a fs
+
 stepE :: a -> Coroutine (Event a) a
 stepE a = Coroutine $ \ev ->
     let a' = last (a:ev)
