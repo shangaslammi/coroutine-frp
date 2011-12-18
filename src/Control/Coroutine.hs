@@ -60,6 +60,13 @@ mapC co = Coroutine $ \as ->
         step co a = (\(a,b)->(b,a)) $ runC co a
     in (bs, mapC co')
 
+filterC :: (b -> Bool) -> Coroutine a b -> Coroutine a b
+filterC p co = Coroutine $ step co where
+    step co a = let (b, co') = runC co a
+        in if (p b)
+            then (b, Coroutine $ step co')
+            else step co' a
+
 cycleC :: [b] -> Coroutine a b
 cycleC = Coroutine . step . cycle where
     step (x:xs) _ = (x, Coroutine $ step xs)
