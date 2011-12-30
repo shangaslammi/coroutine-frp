@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 
 module Control.Coroutine where
 
@@ -28,13 +29,14 @@ instance Applicative (Coroutine i) where
 instance Category Coroutine where
     id = Coroutine $ \i -> (i, id)
 
-    cof . cog = Coroutine $ \i ->
-        let (x, cog') = runC cog i
+    cof . cog = Coroutine $ step cof cog where
+        step !cof !cog i = (y, Coroutine $ step cof' cog') where
+            (x, cog') = runC cog i
             (y, cof') = runC cof x
-        in (y, cof' . cog')
 
 instance Arrow Coroutine where
-    arr f = Coroutine $ \i -> (f i, arr f)
+    arr f = Coroutine step where
+        step i = (f i, Coroutine step)
 
     first co = Coroutine $ \(a,b) ->
         let (c, co') = runC co a

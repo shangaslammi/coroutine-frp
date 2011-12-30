@@ -27,7 +27,7 @@ watch f = Coroutine $ \i ->
 
 scan :: (a -> b -> a) -> a -> Coroutine b a
 scan f i = Coroutine $ step i where
-    step a b = let a' = f a b in (a', scan f a')
+    step !a b = let a' = f a b in (a', Coroutine $ step a')
 
 withPrevious :: a -> Coroutine a (a,a)
 withPrevious first = Coroutine $ \i -> ((i, first), step i) where
