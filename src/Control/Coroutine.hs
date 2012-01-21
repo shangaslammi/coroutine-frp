@@ -6,6 +6,7 @@ import Prelude hiding (id, (.))
 
 import Data.Functor
 import Data.List (mapAccumL)
+import Data.IORef
 import Control.Applicative
 import Control.Arrow
 import Control.Category
@@ -18,6 +19,8 @@ instance Functor (Coroutine i) where
         let (o, co') = runC co i
         in (f o, fmap f co')
 
+    {-# INLINE fmap #-}
+
 instance Applicative (Coroutine i) where
     pure x = Coroutine $ const (x, pure x)
 
@@ -25,6 +28,9 @@ instance Applicative (Coroutine i) where
         let (f, cof') = runC cof i
             (x, cox') = runC cox i
         in (f x, cof' <*> cox')
+
+    {-# INLINE pure #-}
+    {-# INLINE (<*>) #-}
 
 instance Category Coroutine where
     id = Coroutine $ \i -> (i, id)
@@ -34,13 +40,30 @@ instance Category Coroutine where
             (x, cog') = runC cog i
             (y, cof') = runC cof x
 
+    {-# INLINE id #-}
+    {-# INLINE (.) #-}
+
 instance Arrow Coroutine where
     arr f = Coroutine step where
         step i = (f i, Coroutine step)
 
-    first co = Coroutine $ \(a,b) ->
-        let (c, co') = runC co a
-        in ((c,b), first co')
+    first co = Coroutine $ step co where
+        step !co (a,b) = a `seq` b `seq` ((c,b), Coroutine $ step co') where
+            (!c, co') = runC co a
+
+    second co = Coroutine $ step co where
+        step !co (a,b) = a `seq` c `seq` ((a,c), Coroutine $ step co') where
+            (c, co') = runC co b
+
+    cof &&& cog = Coroutine $ step cof cog where
+        step !cof !cog a = b `seq` c `seq` ((b, c), Coroutine $ step cof' cog') where
+            (b, cof') = runC cof a
+            (c, cog') = runC cog a
+
+    {-# INLINE arr #-}
+    {-# INLINE first #-}
+    {-# INLINE second #-}
+    {-# INLINE (&&&) #-}
 
 instance ArrowLoop Coroutine where
     loop co = Coroutine $ \b ->
@@ -62,8 +85,15 @@ mapC co = Coroutine $ \as ->
         step co a = (\(a,b)->(b,a)) $ runC co a
     in (bs, mapC co')
 
-filterC :: (b -> Bool) -> Coroutine a b -> Coroutine a b
-filterC p co = Coroutine $ step co where
+filterC :: (a -> Bool) -> b -> Coroutine a b -> Coroutine a b
+filterC p b co = Coroutine $ step b co where
+    step b co a = (b', Coroutine $ step b' co') where
+        (b', co') = if p a
+            then runC co a
+            else (b, co)
+
+filterOutC :: (b -> Bool) -> Coroutine a b -> Coroutine a b
+filterOutC p co = Coroutine $ step co where
     step co a = let (b, co') = runC co a
         in if (p b)
             then (b, Coroutine $ step co')
@@ -88,3 +118,12 @@ evalList :: Coroutine i o -> [i] -> [o]
 evalList _  []     = []
 evalList co (x:xs) = o:evalList co' xs
     where (o, co') = runC co x
+
+wrapIO :: Coroutine a b -> IO (a -> IO b)
+wrapIO co = do
+    ref <- newIORef co
+    return $ \a -> do
+        co <- readIORef ref
+        let (b, co') = runC co a
+        writeIORef ref co'
+        return b

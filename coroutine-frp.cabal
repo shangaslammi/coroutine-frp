@@ -9,6 +9,7 @@ Maintainer:         Sami Hangaslammi <shang@iki.fi>
 Category:           Reactivity
 Build-Type:         Simple
 Cabal-Version:      >=1.2
+GHC-Options:        -O2
 
 Hs-Source-Dirs:     src
 Exposed-modules:    Control.Coroutine, Control.Coroutine.FRP, Control.Coroutine.FRP.Collections

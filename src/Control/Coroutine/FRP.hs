@@ -29,6 +29,8 @@ scan :: (a -> b -> a) -> a -> Coroutine b a
 scan f i = Coroutine $ step i where
     step !a b = let a' = f a b in (a', Coroutine $ step a')
 
+{-# INLINE scan #-}
+
 withPrevious :: a -> Coroutine a (a,a)
 withPrevious first = Coroutine $ \i -> ((i, first), step i) where
     step old = Coroutine $ \i -> ((i, old), step i)
@@ -61,7 +63,8 @@ derivate = withPrevious 0 >>> zipC (-)
 
 scanE :: (a -> e -> a) -> a -> Coroutine (Event e) a
 scanE f i = Coroutine $ step i where
-    step a e = let a' = foldl' f a e in (a', scanE f a')
+    step a [] = (a, Coroutine $ step a)
+    step !a e = let a' = foldl' f a e in (a', Coroutine $ step a')
 
 mapE :: (e -> e') -> Coroutine (Event e) (Event e')
 mapE = arr . map
