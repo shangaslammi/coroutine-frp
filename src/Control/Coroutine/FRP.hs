@@ -13,7 +13,7 @@ import qualified Data.IntMap as IntMap
 type Event a = [a]
 
 edge :: Eq a => Coroutine a (Event a)
-edge = Coroutine $ \i -> ([i], step i) where
+edge = Coroutine $ \i -> ([], step i) where
     step old = Coroutine $ \i ->
         if old == i
             then ([],  step i)
