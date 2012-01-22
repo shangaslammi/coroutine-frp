@@ -48,15 +48,15 @@ instance Arrow Coroutine where
         step i = (f i, Coroutine step)
 
     first co = Coroutine $ step co where
-        step !co (a,b) = a `seq` b `seq` ((c,b), Coroutine $ step co') where
-            (!c, co') = runC co a
+        step !co (a,b) = ((c,b), Coroutine $ step co') where
+            (c, co') = runC co a
 
     second co = Coroutine $ step co where
-        step !co (a,b) = a `seq` c `seq` ((a,c), Coroutine $ step co') where
+        step !co (a,b) = ((a,c), Coroutine $ step co') where
             (c, co') = runC co b
 
     cof &&& cog = Coroutine $ step cof cog where
-        step !cof !cog a = b `seq` c `seq` ((b, c), Coroutine $ step cof' cog') where
+        step !cof !cog a = ((b, c), Coroutine $ step cof' cog') where
             (b, cof') = runC cof a
             (c, cog') = runC cog a
 
