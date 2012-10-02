@@ -5,6 +5,7 @@ module Control.Coroutine where
 import Prelude hiding (id, (.))
 
 import Data.Functor
+import Data.Monoid
 import Data.List (mapAccumL)
 import Data.IORef
 import Control.Applicative
@@ -31,6 +32,10 @@ instance Applicative (Coroutine i) where
 
     {-# INLINE pure #-}
     {-# INLINE (<*>) #-}
+
+instance Monoid o => Monoid (Coroutine i o) where
+    mempty  = pure mempty
+    mappend = (<++>)
 
 instance Category Coroutine where
     id = Coroutine $ \i -> (i, id)
@@ -76,7 +81,10 @@ instance ArrowChoice Coroutine where
             Left b  -> let (o, co') = runC co b in (Left o, left co')
             Right c -> (Right c, Coroutine step)
 
-zipC :: (a -> b -> c) -> Coroutine (a,b) c
+(<++>) :: Monoid o => Coroutine i o -> Coroutine i o -> Coroutine i o
+(<++>) = liftA2 mappend
+
+zipC :: (a -> b -> c) -> Coroutine (a, b) c
 zipC = arr . uncurry
 
 mapC :: Coroutine a b -> Coroutine [a] [b]
@@ -108,11 +116,11 @@ updateC = Coroutine . step where
     step a f = (a', Coroutine $ step a') where
         a' = f a
 
-joinCM :: Monad m => Coroutine (m a, m b) (m (a,b))
-joinCM = zipC $ liftM2 (,)
+zipCM :: Monad m => Coroutine (m a, m b) (m (a, b))
+zipCM = zipC $ liftM2 (,)
 
-joinCA :: Applicative p => Coroutine (p a, p b) (p (a,b))
-joinCA = zipC $ liftA2 (,)
+zipCA :: Applicative p => Coroutine (p a, p b) (p (a,b))
+zipCA = zipC $ liftA2 (,)
 
 evalList :: Coroutine i o -> [i] -> [o]
 evalList _  []     = []
