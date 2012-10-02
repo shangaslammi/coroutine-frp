@@ -132,6 +132,17 @@ switchWithSelf switch co  = Coroutine $ step co where
         co' = switch co (last ev)
         (b, co'') = runC co a
 
+switchLoopWith :: (e -> Coroutine a b) -> Coroutine a (b, Event e) -> Coroutine a b
+switchLoopWith switch co = Coroutine $ step co where
+    step co i =
+        let ((o, evs), co') = runC co i
+        in  case evs of
+            []  -> (o, Coroutine $ step co')
+            evs -> (o, switch $ last evs)
+
+switchLoop :: Coroutine a (b, Event (Coroutine a b)) -> Coroutine a b
+switchLoop = switchLoopWith id
+
 delayE :: Int -> Coroutine (Event e) (Event e)
 delayE delay = arr (const delay) &&& C.id >>> delayEn
 
