@@ -117,10 +117,10 @@ switchE :: Coroutine a b -> Coroutine (a, Event (Coroutine a b)) b
 switchE = switchWith id
 
 switchWith :: (e -> Coroutine a b) -> Coroutine a b -> Coroutine (a, Event e) b
-switchWith switch co  = Coroutine $ step1 co where
-    step1 co (a, []) = (b, Coroutine $ step1 co') where
+switchWith switch co  = Coroutine $ step co where
+    step co (a, []) = (b, Coroutine $ step co') where
         (b, co') = runC co a
-    step1 _ (a, ev) = (b, Coroutine $ step1 co') where
+    step _ (a, ev) = (b, Coroutine $ step co') where
         co = switch (last ev)
         (b, co') = runC co a
 
