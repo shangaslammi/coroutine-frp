@@ -124,6 +124,14 @@ switchWith switch co  = Coroutine $ step1 co where
         co = switch (last ev)
         (b, co') = runC co a
 
+switchWithSelf :: (Coroutine a b -> e -> Coroutine a b) -> Coroutine a b -> Coroutine (a, Event e) b
+switchWithSelf switch co  = Coroutine $ step co where
+    step co (a, []) = (b, Coroutine $ step co') where
+        (b, co') = runC co a
+    step co (a, ev) = (b, Coroutine $ step co'') where
+        co' = switch co (last ev)
+        (b, co'') = runC co a
+
 delayE :: Int -> Coroutine (Event e) (Event e)
 delayE delay = arr (const delay) &&& C.id >>> delayEn
 
