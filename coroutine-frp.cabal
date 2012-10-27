@@ -9,10 +9,16 @@ maintainer:         Sami Hangaslammi <shang@iki.fi>
 category:           Reactivity
 build-type:         Simple
 cabal-version:      >=1.8
-
-source-repository:  git://github.com/shangaslammi/coroutine-frp.git
 homepage:           https://github.com/shangaslammi/coroutine-frp
 
+source-repository head
+    type:     git
+    location: git://github.com/shangaslammi/coroutine-frp.git
+
+source-repository this
+    type:     git
+    location: git://github.com/shangaslammi/coroutine-frp.git
+    tag:      v0.1.0.0
 
 library
     ghc-options:        -O2
