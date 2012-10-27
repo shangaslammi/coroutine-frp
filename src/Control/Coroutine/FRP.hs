@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE TupleSections #-}
 
 module Control.Coroutine.FRP where
 
@@ -69,8 +70,11 @@ scanE f i = Coroutine $ step i where
 mapE :: (e -> e') -> Coroutine (Event e) (Event e')
 mapE = arr . map
 
-tagE :: Coroutine (a, Event e) (Event a)
-tagE = arr $ \(a, ev) -> map (const a) ev
+tagE :: Coroutine (Event e, a) (Event (e, a))
+tagE = arr $ \(ev, a) -> map (,a) ev
+
+sample :: Coroutine (Event e, a) (Event a)
+sample = arr $ \(ev, a) -> map (const a) ev
 
 concatMapE :: (e -> Event e') -> Coroutine (Event e) (Event e')
 concatMapE = arr . concatMap
@@ -123,6 +127,20 @@ switchWith switch co  = Coroutine $ step co where
     step _ (a, ev) = (b, Coroutine $ step co') where
         co = switch (last ev)
         (b, co') = runC co a
+
+switchCurrent :: (b -> Coroutine a b) -> b -> Coroutine (a, Event e) b
+switchCurrent switch initial = Coroutine $ step (switch initial) initial where
+    step co prev (a, ev) = (b, Coroutine $ step co' b) where
+        (b, co') = runC (case ev of
+            [] -> co
+            _  -> switch prev) a
+
+switchCurrentE :: (e -> b -> Coroutine a b) -> e -> b -> Coroutine (a, Event e) b
+switchCurrentE switch initialE initialV = Coroutine $ step (switch initialE initialV) initialV where
+    step co prev (a, ev) = (b, Coroutine $ step co' b) where
+        (b, co') = runC (case ev of
+            [] -> co
+            _  -> switch (last ev) prev) a
 
 switchWithSelf :: (Coroutine a b -> e -> Coroutine a b) -> Coroutine a b -> Coroutine (a, Event e) b
 switchWithSelf switch co  = Coroutine $ step co where
