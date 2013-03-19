@@ -1,5 +1,5 @@
 name:               coroutine-frp
-version:            0.1.0.0
+version:            0.2.0.0
 synopsis:           FRP using coroutines
 description:        A minimalistic reactive programming library based on coroutines for fixed time-step interactive simulations.
 license:            MIT
@@ -21,7 +21,7 @@ source-repository this
     tag:      v0.1.0.0
 
 library
-    ghc-options:        -O2
+    ghc-options:        -O2 -Wall
     hs-source-dirs:     src
     exposed-modules:    Control.Coroutine, Control.Coroutine.FRP, Control.Coroutine.FRP.Collections
     build-depends:      base >= 4, transformers >= 0.2.2.0, containers >= 0.4.2.0
