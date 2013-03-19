@@ -4,7 +4,6 @@ module Control.Coroutine where
 
 import Prelude hiding (id, (.))
 
-import Data.Functor
 import Data.Monoid
 import Data.List (mapAccumL)
 import Data.IORef
@@ -40,7 +39,7 @@ instance Monoid o => Monoid (Coroutine i o) where
 instance Category Coroutine where
     id = Coroutine $ \i -> (i, id)
 
-    cof . cog = Coroutine $ step cof cog where
+    a . b = Coroutine $ step a b where
         step !cof !cog i = (y, Coroutine $ step cof' cog') where
             (x, cog') = runC cog i
             (y, cof') = runC cof x
@@ -52,15 +51,15 @@ instance Arrow Coroutine where
     arr f = Coroutine step where
         step i = (f i, Coroutine step)
 
-    first co = Coroutine $ step co where
+    first = Coroutine . step where
         step !co (a,b) = ((c,b), Coroutine $ step co') where
             (c, co') = runC co a
 
-    second co = Coroutine $ step co where
+    second = Coroutine . step where
         step !co (a,b) = ((a,c), Coroutine $ step co') where
             (c, co') = runC co b
 
-    cof &&& cog = Coroutine $ step cof cog where
+    ca &&& cb = Coroutine $ step ca cb where
         step !cof !cog a = ((b, c), Coroutine $ step cof' cog') where
             (b, cof') = runC cof a
             (c, cog') = runC cog a
@@ -90,18 +89,18 @@ zipC = arr . uncurry
 mapC :: Coroutine a b -> Coroutine [a] [b]
 mapC co = Coroutine $ \as ->
     let (co', bs) = mapAccumL step co as
-        step co a = (\(a,b)->(b,a)) $ runC co a
+        step c x = (\(a,b)->(b,a)) $ runC c x
     in (bs, mapC co')
 
 filterC :: (a -> Bool) -> b -> Coroutine a b -> Coroutine a b
-filterC p b co = Coroutine $ step b co where
+filterC p initial = Coroutine . step initial where
     step b co a = (b', Coroutine $ step b' co') where
         (b', co') = if p a
             then runC co a
             else (b, co)
 
 filterOutC :: (b -> Bool) -> Coroutine a b -> Coroutine a b
-filterOutC p co = Coroutine $ step co where
+filterOutC p = Coroutine . step where
     step co a = let (b, co') = runC co a
         in if (p b)
             then (b, Coroutine $ step co')
@@ -110,6 +109,7 @@ filterOutC p co = Coroutine $ step co where
 cycleC :: [b] -> Coroutine a b
 cycleC = Coroutine . step . cycle where
     step (x:xs) _ = (x, Coroutine $ step xs)
+    step _      _ = error "impossible"  -- cycle never returns an empty list
 
 updateC :: a -> Coroutine (a -> a) a
 updateC = Coroutine . step where
@@ -128,8 +128,8 @@ evalList co (x:xs) = o:evalList co' xs
     where (o, co') = runC co x
 
 wrapIO :: Coroutine a b -> IO (a -> IO b)
-wrapIO co = do
-    ref <- newIORef co
+wrapIO initial = do
+    ref <- newIORef initial
     return $ \a -> do
         co <- readIORef ref
         let (b, co') = runC co a

@@ -33,7 +33,7 @@ scan f i = Coroutine $ step i where
 {-# INLINE scan #-}
 
 withPrevious :: a -> Coroutine a (a,a)
-withPrevious first = Coroutine $ \i -> ((i, first), step i) where
+withPrevious initial = Coroutine $ \i -> ((i, initial), step i) where
     step old = Coroutine $ \i -> ((i, old), step i)
 
 withPrevious' :: Coroutine a (a,a)
@@ -99,9 +99,9 @@ stepE a = Coroutine $ \ev ->
     in (a', stepE a')
 
 skipE :: Int -> Coroutine (Event e) (Event e)
-skipE n = Coroutine $ step n where
+skipE = Coroutine . step where
     step 0 ev = (ev, C.id)
-    step n ev = ([], Coroutine $ step $ n-1)
+    step n _  = ([], Coroutine $ step $ n-1)
 
 onceE :: [a] -> Coroutine i (Event a)
 onceE events = onceThen events $ pure []
@@ -117,58 +117,58 @@ restartWhen co = Coroutine $ step co where
             | null ev   = step c'
             | otherwise = step co
 
-switchE :: Coroutine a b -> Coroutine (a, Event (Coroutine a b)) b
-switchE = switchWith id
+switch :: Coroutine a b -> Coroutine (a, Event (Coroutine a b)) b
+switch = switchWith id
 
 switchWith :: (e -> Coroutine a b) -> Coroutine a b -> Coroutine (a, Event e) b
-switchWith switch co  = Coroutine $ step co where
+switchWith switchFunc = Coroutine . step where
     step co (a, []) = (b, Coroutine $ step co') where
         (b, co') = runC co a
     step _ (a, ev) = (b, Coroutine $ step co') where
-        co = switch (last ev)
+        co = switchFunc (last ev)
         (b, co') = runC co a
 
 switchCurrent :: (b -> Coroutine a b) -> b -> Coroutine (a, Event e) b
-switchCurrent switch initial = Coroutine $ step (switch initial) initial where
+switchCurrent switchFunc initial = Coroutine $ step (switchFunc initial) initial where
     step co prev (a, ev) = (b, Coroutine $ step co' b) where
         (b, co') = runC (case ev of
             [] -> co
-            _  -> switch prev) a
+            _  -> switchFunc prev) a
 
 switchCurrentE :: (e -> b -> Coroutine a b) -> e -> b -> Coroutine (a, Event e) b
-switchCurrentE switch initialE initialV = Coroutine $ step (switch initialE initialV) initialV where
+switchCurrentE switchFunc initialE initialV = Coroutine $ step (switchFunc initialE initialV) initialV where
     step co prev (a, ev) = (b, Coroutine $ step co' b) where
         (b, co') = runC (case ev of
             [] -> co
-            _  -> switch (last ev) prev) a
+            _  -> switchFunc (last ev) prev) a
 
 switchWithSelf :: (Coroutine a b -> e -> Coroutine a b) -> Coroutine a b -> Coroutine (a, Event e) b
-switchWithSelf switch co  = Coroutine $ step co where
+switchWithSelf switchFunc = Coroutine . step where
     step co (a, []) = (b, Coroutine $ step co') where
         (b, co') = runC co a
     step co (a, ev) = (b, Coroutine $ step co'') where
-        co' = switch co (last ev)
-        (b, co'') = runC co a
+        co' = switchFunc co (last ev)
+        (b, co'') = runC co' a
 
 switchLoopWith :: (e -> Coroutine a b) -> Coroutine a (b, Event e) -> Coroutine a b
-switchLoopWith switch co = Coroutine $ step co where
+switchLoopWith switchFunc = Coroutine . step where
     step co i =
         let ((o, evs), co') = runC co i
         in  case evs of
             []  -> (o, Coroutine $ step co')
-            evs -> (o, switch $ last evs)
+            _   -> (o, switchFunc $ last evs)
 
 switchLoop :: Coroutine a (b, Event (Coroutine a b)) -> Coroutine a b
 switchLoop = switchLoopWith id
 
 delayE :: Int -> Coroutine (Event e) (Event e)
-delayE delay = arr (const delay) &&& C.id >>> delayEn
+delayE tickCount = arr (const tickCount) &&& C.id >>> delayEn
 
 delayEn :: Coroutine (Int, Event e) (Event e)
 delayEn = Coroutine $ step 0 IntMap.empty where
-    step !cur !buffer (delay, ev) = (ev', Coroutine $ step (cur+1) buffer'') where
+    step !cur !buffer (delayTicks, ev) = (ev', Coroutine $ step (cur+1) buffer'') where
         ev' = IntMap.findWithDefault [] cur buffer'
         buffer'
             | null ev   = buffer
-            | otherwise = IntMap.insertWith (++) (cur+delay) ev buffer
+            | otherwise = IntMap.insertWith (++) (cur + delayTicks) ev buffer
         buffer'' = IntMap.delete cur buffer'
